@@ -65,9 +65,7 @@ fn new_header(header: &[u8]) -> Header {
 }
 
 fn new_program_rom(program_rom: Vec<u8>) -> ProgramRom {
-    ProgramRom {
-        data: program_rom,
-    }
+    ProgramRom { data: program_rom }
 }
 
 fn new_character_rom(character_rom: Vec<u8>) -> CharacterRom {
@@ -78,12 +76,17 @@ fn new_character_rom(character_rom: Vec<u8>) -> CharacterRom {
 
 fn new_sprite(raw: Vec<u8>) -> Sprite {
     let mut sprites = Vec::new();
-    for chank in 0..(raw.len()/16) {
-         let mut sprite = Vec::new();
+    for chank in 0..(raw.len() / 16) {
+        let mut sprite = Vec::new();
 
         for i in 0..8 {
             let mut tmp = Vec::new();
-            let (a, b): (Vec<char>, Vec<char>) = (format!("{:08b}", raw[i+(chank*16)]).chars().collect(), format!("{:08b}", raw[i+(chank*16)+8]).chars().collect());
+            let (a, b): (Vec<char>, Vec<char>) = (
+                format!("{:08b}", raw[i + (chank * 16)]).chars().collect(),
+                format!("{:08b}", raw[i + (chank * 16) + 8])
+                    .chars()
+                    .collect(),
+            );
 
             for pixel in 0..8 {
                 tmp.push(format!("{}{}", b[pixel], a[pixel]));
@@ -95,20 +98,21 @@ fn new_sprite(raw: Vec<u8>) -> Sprite {
         sprites.push(sprite);
     }
 
-    Sprite {
-        data: sprites,
-    }   
+    Sprite { data: sprites }
 }
 
 impl Sprite {
     pub fn to_png(&self) {
-        let mut image = ImageBuffer::<Rgb<u8>, Vec<u8>>::new((self.data.len() * 8 + 10) as u32, (self.data[0].len()) as u32);
+        let mut image = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(
+            (self.data.len() * 8 + 10) as u32,
+            (self.data[0].len()) as u32,
+        );
         for chank in 0..(self.data.len()) {
             for y in 0..(self.data[chank].len()) {
                 for x in 0..(self.data[chank][y].len()) {
                     println!("{} {} {}", chank, x, y);
                     let rgb = match self.data[chank][y][x].as_str() {
-                        "00" => [255, 0, 0], // [0, 0, 0], // black
+                        "00" => [255, 0, 0],     // [0, 0, 0], // black
                         "01" => [114, 113, 113], // gray (Light)
                         "10" => [204, 204, 204], // gray (Dark)
                         "11" => [255, 255, 255], //white
@@ -116,12 +120,10 @@ impl Sprite {
                     };
 
                     // set a central pixel to white
-                    image.get_pixel_mut( (chank * 8 + x) as u32, y as u32).data = rgb;
+                    image.get_pixel_mut((chank * 8 + x) as u32, y as u32).data = rgb;
                 }
             }
         }
-
-
 
         // write it out to a file
         image.save("/path/to/image.png").unwrap();
