@@ -97,7 +97,10 @@ impl Cpu {
             0x65 => Ok(0),
             0x66 => Ok(0),
             0x68 => Ok(0),
-            0x69 => Ok(0),
+            0x69 => {
+                self.adc(rom.data[self.program_counter as usize + 1]);
+                Ok(0)
+            }
             0x6A => Ok(0),
             0x6C => Ok(0),
             0x6D => Ok(0),
@@ -214,6 +217,101 @@ impl Cpu {
     }
 
     fn step_pc(&mut self) {
+        self.program_counter += 1;
+    }
+
+    fn adc(&mut self, data: u8) {
+        // キャリーフラグを取得
+        let carry = if self.processor_status_register & 0b0000_0001 != 0 {
+            1
+        } else {
+            0
+        };
+
+        // 演算する
+        let result = self.accumulator as u16 + data as u16 + carry as u16;
+
+        // キャリーフラグを更新
+        self.processor_status_register = if result > 0xFF {
+            self.processor_status_register | 0b0000_0001
+        } else {
+            self.processor_status_register & 0b1111_1110
+        };
+
+        // 結果が0の場合はZフラグ(Zero flag)を立てる
+        self.processor_status_register = if result == 0 {
+            self.processor_status_register | 0b0000_0010
+        } else {
+            self.processor_status_register & 0b1111_1101
+        };
+
+        // 結果が負の場合はNフラグ(Negative flag)を立てる
+        self.processor_status_register = if result as u8 & 0b1000_0000 != 0 {
+            self.processor_status_register | 0b1000_0000
+        } else {
+            self.processor_status_register & 0b0111_1111
+        };
+
+        // オーバーフローフラグを更新
+        self.processor_status_register =
+            if (result as u8 ^ data) & (result as u8 ^ self.accumulator) & 0b1000_0000 != 0 {
+                self.processor_status_register | 0b0100_0000
+            } else {
+                self.processor_status_register & 0b1011_1111
+            };
+
+        // アキュムレーターに結果をセット
+        self.accumulator = result as u8;
+
+        self.program_counter += 1;
+    }
+
+    fn and(&mut self, data: u8) {
+        let result = self.accumulator & data;
+
+        // 結果が0の場合はZフラグ(Zero flag)を立てる
+        self.processor_status_register = if result == 0 {
+            self.processor_status_register | 0b0000_0010
+        } else {
+            self.processor_status_register & 0b1111_1101
+        };
+
+        // 結果が負の場合はNフラグ(Negative flag)を立てる
+        self.processor_status_register = if result & 0b1000_0000 != 0 {
+            self.processor_status_register | 0b1000_0000
+        } else {
+            self.processor_status_register & 0b0111_1111
+        };
+
+        self.accumulator = result;
+        self.program_counter += 1;
+    }
+
+    fn asl(&mut self) {
+        let result = self.accumulator << 1;
+
+        // キャリーフラグを更新
+        self.processor_status_register = if self.accumulator & 0b1000_0000 != 0 {
+            self.processor_status_register | 0b0000_0001
+        } else {
+            self.processor_status_register & 0b1111_1110
+        };
+
+        // 結果が0の場合はZフラグ(Zero flag)を立てる
+        self.processor_status_register = if result == 0 {
+            self.processor_status_register | 0b0000_0010
+        } else {
+            self.processor_status_register & 0b1111_1101
+        };
+
+        // 結果が負の場合はNフラグ(Negative flag)を立てる
+        self.processor_status_register = if result & 0b1000_0000 != 0 {
+            self.processor_status_register | 0b1000_0000
+        } else {
+            self.processor_status_register & 0b0111_1111
+        };
+
+        self.accumulator = result;
         self.program_counter += 1;
     }
 
